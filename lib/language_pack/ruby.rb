@@ -478,8 +478,7 @@ WARNING
     instrument 'ruby.build_bundler' do
       log("bundle") do
         bundle_without = ENV["BUNDLE_WITHOUT"] || "development:test"
-        bundle_bin     = "bundle"
-        bundle_command = "#{bundle_bin} install --without #{bundle_without} --path vendor/bundle --binstubs #{bundler_binstubs_path}"
+        bundle_command = "bundle install --without #{bundle_without} --path vendor/bundle --binstubs #{bundler_binstubs_path}"
         bundle_command << " -j4"
 
         unless File.exist?("Gemfile.lock")
@@ -503,7 +502,7 @@ WARNING
           cache.load ".bundle"
         end
 
-        version = run_stdout("#{bundle_bin} version").strip
+        version = run_stdout("bundle version").strip
         topic("Installing dependencies using #{version}")
 
         load_bundler_cache
@@ -540,7 +539,7 @@ WARNING
             if load_default_cache?
               run "bundle clean > /dev/null"
             else
-              pipe "#{bundle_bin} clean 2> /dev/null"
+              pipe "bundle clean 2> /dev/null"
             end
           end
           cache.store ".bundle"
