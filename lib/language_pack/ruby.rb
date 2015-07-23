@@ -14,7 +14,7 @@ class LanguagePack::Ruby < LanguagePack::Base
   NAME                 = "ruby"
   LIBYAML_VERSION      = "0.1.6"
   LIBYAML_PATH         = "libyaml-#{LIBYAML_VERSION}"
-  BUNDLER_VERSION      = "1.7.12"
+  BUNDLER_VERSION      = "1.9.7"
   BUNDLER_GEM_PATH     = "bundler-#{BUNDLER_VERSION}"
   DEFAULT_RUBY_VERSION = "ruby-2.0.0"
   RBX_BASE_URL         = "http://binaries.rubini.us/heroku"
@@ -29,7 +29,7 @@ class LanguagePack::Ruby < LanguagePack::Base
   end
 
   def self.bundler
-    @bundler ||= LanguagePack::Helpers::BundlerWrapper.new.install
+    @@bundler ||= LanguagePack::Helpers::BundlerWrapper.new.install
   end
 
   def bundler
@@ -256,6 +256,7 @@ EOF
 #{set_jvm_max_heap}
 echo #{default_java_tool_options}
 SHELL
+        ENV["JRUBY_OPTS"] = env('JRUBY_BUILD_OPTS') || env('JRUBY_OPTS')
       end
       setup_ruby_install_env
       ENV["PATH"] += ":#{node_bp_bin_path}" if node_js_installed?
@@ -297,7 +298,7 @@ SHELL
       set_env_override "GEM_PATH", "$HOME/#{slug_vendor_base}:$GEM_PATH"
       set_env_override "PATH",     binstubs_relative_paths.map {|path| "$HOME/#{path}" }.join(":") + ":$PATH"
 
-      # add_to_profiled set_default_web_concurrency
+      add_to_profiled set_default_web_concurrency if env("SENSIBLE_DEFAULTS")
 
       if ruby_version.jruby?
         add_to_profiled set_jvm_max_heap
@@ -582,9 +583,9 @@ WARNING
           instrument "ruby.bundle_clean" do
             # Only show bundle clean output when not using default cache
             if load_default_cache?
-              run "bundle clean > /dev/null"
+              run("#{bundle_bin} clean > /dev/null", user_env: true)
             else
-              pipe("#{bundle_bin} clean", out: "2> /dev/null")
+              pipe("#{bundle_bin} clean", out: "2> /dev/null", user_env: true)
             end
           end
           @bundler_cache.store
@@ -611,6 +612,12 @@ ERROR
   end
 
   def post_bundler
+    instrument "ruby.post_bundler" do
+      Dir[File.join(slug_vendor_base, "**", ".git")].each do |dir|
+        FileUtils.rm_rf(dir)
+      end
+      bundler.clean
+    end
   end
 
   # RUBYOPT line that requires syck_hack file
