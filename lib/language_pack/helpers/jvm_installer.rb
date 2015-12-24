@@ -28,6 +28,11 @@ class LanguagePack::JvmInstaller
   end
 
   def install(jruby_version, forced = false)
+    if Dir.exist?(".jdk")
+      topic "Using pre-installed JDK"
+      return
+    end
+
     jvm_version = system_properties['java.runtime.version']
     case jvm_version
     when "1.9", "9"
@@ -59,6 +64,7 @@ class LanguagePack::JvmInstaller
 
   def fetch_untar(jvm_path, jvm_version=nil)
     topic "Installing JVM: #{jvm_version || jvm_path}"
+
     FileUtils.mkdir_p(@vendor_dir)
     Dir.chdir(@vendor_dir) do
       @fetcher.fetch_untar(jvm_path)
